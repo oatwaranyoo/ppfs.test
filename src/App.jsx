@@ -4,6 +4,7 @@ import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import UploadHDC from './pages/UploadHDC'; // <-- นำเข้า Component ใหม่
 import AuditLogs from './pages/AuditLogs';
+import UploadNHSO from './pages/UploadNHSO';
 
 // Component สร้างหน้าเปล่าๆ ชั่วคราว สำหรับเมนูที่ยังไม่ได้ทำ
 const PlaceholderPage = ({ title }) => (
@@ -20,7 +21,7 @@ function App() {
             <Route path="/" element={<MainLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="upload-hdc" element={<UploadHDC />} />  {/* <-- ใช้ Component ที่สร้างไว้ */}
-                <Route path="upload-nhso" element={<PlaceholderPage title="ระบบนำเข้าข้อมูล สปสช." />} />
+                <Route path="upload-nhso" element={<UploadNHSO />} />
                 <Route path="users" element={<PlaceholderPage title="ระบบจัดการผู้ใช้งาน" />} />
                 <Route path="settings" element={<AuditLogs />} />
             </Route>
