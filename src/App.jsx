@@ -1,20 +1,31 @@
 import { Routes, Route } from 'react-router-dom';
+import Login from './pages/Login';
+import MainLayout from './components/layout/MainLayout';
+import Dashboard from './pages/Dashboard';
+import UploadHDC from './pages/UploadHDC'; // <-- นำเข้า Component ใหม่
+import AuditLogs from './pages/AuditLogs';
 
-const Dashboard = () => (
-  <div className="min-h-screen flex items-center justify-center bg-slate-100">
-    <div className="bg-white p-8 rounded-xl shadow-lg text-center">
-      <h1 className="text-4xl font-bold text-blue-600 mb-4">PPFS Dashboard</h1>
-      <p className="text-slate-600">Frontend (Vite + React 19 + Tailwind v4) is Ready!</p>
+// Component สร้างหน้าเปล่าๆ ชั่วคราว สำหรับเมนูที่ยังไม่ได้ทำ
+const PlaceholderPage = ({ title }) => (
+    <div className="flex items-center justify-center h-full">
+        <h2 className="text-2xl text-slate-400 font-medium">อยู่ระหว่างการพัฒนา: {title}</h2>
     </div>
-  </div>
 );
 
 function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-    </Routes>
-  );
+    return (
+        <Routes>
+            <Route path="/login" element={<Login />} />
+            
+            <Route path="/" element={<MainLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="upload-hdc" element={<UploadHDC />} />  {/* <-- ใช้ Component ที่สร้างไว้ */}
+                <Route path="upload-nhso" element={<PlaceholderPage title="ระบบนำเข้าข้อมูล สปสช." />} />
+                <Route path="users" element={<PlaceholderPage title="ระบบจัดการผู้ใช้งาน" />} />
+                <Route path="settings" element={<AuditLogs />} />
+            </Route>
+        </Routes>
+    );
 }
 
 export default App;
