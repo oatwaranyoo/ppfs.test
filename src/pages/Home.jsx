@@ -1,26 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import { Activity, Database, DollarSign, Users, Loader2 } from 'lucide-react';
 import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
-// ลบ import useTheme ออกชั่วคราว
 
 export default function Home() {
     const [stats, setStats] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    // เพิ่ม State สำหรับดักจับสถานะประมวลผลระบบ (Sync Guard)
     const [isRecalculating, setIsRecalculating] = useState(false);
     
-    // จำลอง isDarkMode เป็น false ไปก่อนจนกว่าจะทำระบบ Theme
-    const isDarkMode = false; 
+    // [ปรับปรุง] ดึงค่า Dark Mode จริง และดักจับการเปลี่ยนแปลงแบบเรียลไทม์
+    const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
 
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // เรียก API ไปที่ Node.js
                 const res = await api.get('/dashboard/summary');
                 setStats(res.data.data);
-                // รับค่า is_recalculating มาเพื่อเปิด/ปิด แถบสีเหลือง
                 setIsRecalculating(res.data.is_recalculating);
             } catch (error) {
                 console.error("Error fetching dashboard:", error);
@@ -29,13 +25,21 @@ export default function Home() {
             }
         };
         fetchDashboardData();
+
+        // Observer ตรวจจับคลาส 'dark' บนแท็ก <html> เมื่อกดสลับโหมด
+        const observer = new MutationObserver(() => {
+            setIsDarkMode(document.documentElement.classList.contains('dark'));
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        return () => observer.disconnect();
     }, []);
 
-    // การตั้งค่า Options สำหรับ Highcharts
-    const getChartOptions = () => {
+    const chartOptions = useMemo(() => {
         const textColor = isDarkMode ? '#f8fafc' : '#1e293b';
         const bgColor = isDarkMode ? '#0f172a' : '#ffffff';
         const tooltipBg = isDarkMode ? '#1e293b' : '#ffffff';
+        const borderColor = isDarkMode ? '#1e293b' : '#ffffff';
 
         return {
             chart: {
@@ -49,35 +53,33 @@ export default function Home() {
             tooltip: {
                 backgroundColor: tooltipBg,
                 style: { color: textColor },
-                pointFormat: '<b>฿{point.y:,.2f}</b> ({point.percentage:.1f}%)'
+                pointFormat: '<b>฿{point.y:,.2f}</b> ({point.percentage:.1f}%)',
+                borderColor: borderColor,
+                borderWidth: 1
             },
             plotOptions: {
                 pie: {
-                    innerRadius: '60%', // ทำให้เป็นโดนัท (Donut Chart)
+                    innerRadius: '60%', 
                     allowPointSelect: true,
                     cursor: 'pointer',
-                    dataLabels: {
-                        enabled: false
-                    },
+                    dataLabels: { enabled: false },
                     showInLegend: true,
-                    borderWidth: isDarkMode ? 0 : 1,
+                    borderWidth: 2,
                     borderColor: bgColor
                 }
             },
             legend: {
-                itemStyle: { color: textColor, fontWeight: 'normal', fontSize: '12px' },
+                itemStyle: { color: textColor, fontWeight: '600', fontSize: '12px' },
                 itemHoverStyle: { color: '#3b82f6' }
             },
-            credits: {
-                enabled: false
-            },
+            credits: { enabled: false },
             series: [{
                 name: 'ยอดเงินชดเชย',
                 colorByPoint: true,
                 data: stats?.chart_data || []
             }]
         };
-    };
+    }, [stats?.chart_data, isDarkMode]);
 
     if (isLoading) {
         return (
@@ -99,11 +101,9 @@ export default function Home() {
                 </p>
             </div>
 
-            {/* -------------------------------------------------------------------------
-                [SRS Critical] Dashboard Maintenance Sync Guard
-            -------------------------------------------------------------------------- */}
+            {/* Warning Sync Guard */}
             {isRecalculating && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md shadow-sm">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 rounded-md shadow-sm">
                     <div className="flex items-center">
                         <div className="flex-shrink-0">
                             <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -111,7 +111,7 @@ export default function Home() {
                             </svg>
                         </div>
                         <div className="ml-3">
-                            <p className="text-sm text-yellow-700 font-medium">
+                            <p className="text-sm text-yellow-700 dark:text-yellow-500 font-medium">
                                 ระบบกำลังประมวลผลสิทธิ์ย้อนหลัง ตัวเลขบางส่วนอาจมีความคลาดเคลื่อนและกำลังถูกปรับปรุง
                             </p>
                         </div>
@@ -121,12 +121,12 @@ export default function Home() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 hover:border-emerald-500 transition-colors">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 hover:border-emerald-500 dark:hover:border-emerald-500 transition-colors">
+                    <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0 shadow-inner">
                         <DollarSign className="w-7 h-7 text-emerald-500" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">ยอดเงินชดเชยรวม (สปสช.)</p>
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">ยอดเงินชดเชยรวม</p>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white truncate max-w-[200px]" title={`฿ ${stats?.nhso_total_money?.toLocaleString()}`}>
                             ฿ {stats?.nhso_total_money?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                         </h3>
@@ -134,11 +134,11 @@ export default function Home() {
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 hover:border-blue-500 transition-colors">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0 shadow-inner">
                         <Database className="w-7 h-7 text-blue-500" />
                     </div>
                     <div>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">ข้อมูลที่นำเข้าแล้ว</p>
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">ข้อมูลนำเข้าแล้ว</p>
                         <h3 className="text-2xl font-black text-slate-800 dark:text-white">
                             {stats?.nhso_total_rows?.toLocaleString() || '0'} <span className="text-sm text-slate-400 font-medium">รายการ</span>
                         </h3>
@@ -146,7 +146,7 @@ export default function Home() {
                 </div>
 
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4 hover:border-purple-500 transition-colors">
-                    <div className="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0 shadow-inner">
                         <Users className="w-7 h-7 text-purple-500" />
                     </div>
                     <div>
@@ -162,18 +162,15 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
                     <h3 className="text-base font-black text-slate-800 dark:text-white mb-6">
-                        สัดส่วนยอดเงินชดเชยตามกิจกรรมหลัก (5 อันดับแรก)
+                        สัดส่วนยอดเงินชดเชย 5 อันดับแรก
                     </h3>
                     
                     {stats?.chart_data && stats.chart_data.length > 0 ? (
                         <div className="w-full">
-                            <HighchartsReact
-                                highcharts={Highcharts}
-                                options={getChartOptions()}
-                            />
+                            <HighchartsReact highcharts={Highcharts} options={chartOptions} />
                         </div>
                     ) : (
-                        <div className="h-[300px] flex items-center justify-center text-slate-400 font-medium">
+                        <div className="h-[300px] flex items-center justify-center text-slate-400 font-medium bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed">
                             ไม่พบข้อมูลสำหรับสร้างกราฟ
                         </div>
                     )}

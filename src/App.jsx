@@ -9,15 +9,17 @@ import DataNHSO from './pages/DataNHSO';
 
 // สร้าง Wrapper Component เพื่อดักจับเฉพาะหน้าที่ต้อง Login
 const ProtectedRoute = () => {
-    // ดึงค่า Token จากระบบที่คุณใช้ (เช่น localStorage หรือ Context)
-    const token = localStorage.getItem('token'); 
+    // [แก้ไข] เปลี่ยนมาดึงค่าจาก sessionStorage ให้ตรงกับที่ Login.jsx บันทึกไว้
+    const tokenPayload = sessionStorage.getItem('token_payload'); 
+    const user = sessionStorage.getItem('user');
     
-    if (!token) {
-        // ถ้าไม่มี Token ให้ Redirect ไปหน้า Login
+    // ตรวจสอบว่ามีทั้ง Token และ ข้อมูล User หรือไม่
+    if (!tokenPayload || !user) {
+        // ถ้าไม่มี ให้ Redirect ไปหน้า Login
         return <Navigate to="/login" replace />;
     }
     
-    // ถ้ามี Token ให้เรนเดอร์หน้า Component ย่อย (Outlet) ตามปกติ
+    // ถ้ามี ให้เรนเดอร์หน้า Component ย่อย (Outlet) ตามปกติ
     return <Outlet />;
 };
 

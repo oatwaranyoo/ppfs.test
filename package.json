@@ -21,7 +21,7 @@
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1",
     "react-select": "^5.10.2",
-    "sweetalert2": "^11.26.21",
+    "sweetalert2": "^11.26.22",
     "tailwindcss": "^4.2.1",
     "xlsx": "^0.18.5"
   },

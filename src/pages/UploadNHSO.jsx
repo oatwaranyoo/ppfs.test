@@ -10,22 +10,32 @@ export default function UploadNHSO() {
     const [status, setStatus] = useState({ type: '', message: '' });
     const [batchId, setBatchId] = useState(null);
 
-    // [SRS Critical] Accidental Closure & Self-Unlock (Beacon API)
+    // [SRS Critical] Accidental Closure & Self-Unlock
     useEffect(() => {
+        const unlockPayload = batchId ? JSON.stringify({ batch_id: batchId }) : null;
+
         const handleBeforeUnload = (e) => {
             if (uploading && batchId) {
-                // ส่ง Beacon ไปปลดล็อคทันทีเมื่อปิดแท็บ
-                navigator.sendBeacon(`http://localhost:5000/api/upload/unlock?batch_id=${batchId}`);
+                // ส่งเป็น Blob เพื่อให้ Backend เข้าใจว่าเป็น JSON
+                const blob = new Blob([unlockPayload], { type: 'application/json' });
+                navigator.sendBeacon(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload/unlock`, blob);
                 e.preventDefault();
-                e.returnValue = ''; // แสดงแจ้งเตือนของเบราว์เซอร์
+                e.returnValue = ''; 
             }
         };
 
         window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+        
+        // Component Unmount (กรณีผู้ใช้กดเปลี่ยนเมนูในระบบขณะอัปโหลด)
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            if (uploading && batchId) {
+                const blob = new Blob([unlockPayload], { type: 'application/json' });
+                navigator.sendBeacon(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload/unlock`, blob);
+            }
+        };
     }, [uploading, batchId]);
 
-    // ฟังก์ชันกรอง HTML Tags ป้องกัน DOM XSS
     const sanitizeHTML = (str) => {
         const div = document.createElement('div');
         div.textContent = str;
@@ -43,28 +53,25 @@ export default function UploadNHSO() {
             return;
         }
 
-        // [SRS Critical] File Metadata Sanitization
         setSanitizedFileName(sanitizeHTML(selectedFile.name));
         setFile(selectedFile);
         setStatus({ type: '', message: '' });
         setProgress(0);
     };
 
-    // ฟังก์ชันหน่วงเวลาสำหรับ Auto-Retry
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // ฟังก์ชันส่ง Chunk พร้อมระบบ Auto-Retry 3 ครั้ง
     const sendChunkWithRetry = async (chunk, currentBatchId, retries = 3) => {
         for (let i = 0; i < retries; i++) {
             try {
                 const response = await api.post('/upload/nhso-chunk', {
                     batch_id: currentBatchId,
                     data: chunk
-                }, { timeout: 120000 }); // Timeout 120 วินาทีตาม SRS
+                }, { timeout: 120000 }); 
                 return response.data;
             } catch (error) {
-                if (i === retries - 1) throw error; // ถ้าครบ 3 ครั้งแล้วยังพัง ให้โยน Error
-                await delay(2000); // รอ 2 วินาทีก่อนลองใหม่
+                if (i === retries - 1) throw error; 
+                await delay(2000); 
             }
         }
     };
@@ -76,20 +83,18 @@ export default function UploadNHSO() {
 
         try {
             // 1. [SRS Critical] Server-Side Batch Allocation
-            // ขอ batch_id จาก Backend ก่อน
             const initResponse = await api.post('/upload/init', { scope: ['nhso_data'] });
             const currentBatchId = initResponse.data.batch_id;
             setBatchId(currentBatchId);
 
             // 2. ปลุก Web Worker ขึ้นมาอ่านไฟล์
             const worker = new Worker(new URL('../workers/excelWorker.js', import.meta.url), { type: 'module' });
-            
             worker.postMessage({ file });
 
             worker.onmessage = async (e) => {
                 const { success, data, error } = e.data;
                 
-                // [SRS Critical] สั่งทำลาย Worker ทันทีเมื่อได้ข้อมูลคืนมา ป้องกัน Memory Leak
+                // [SRS Critical] ทำลาย Worker ทันที
                 worker.terminate();
 
                 if (!success) {
@@ -100,14 +105,12 @@ export default function UploadNHSO() {
 
                 setStatus({ type: 'info', message: 'กำลังส่งข้อมูลเข้าสู่เซิร์ฟเวอร์...' });
 
-                // 3. [SRS Critical] Chunking (ทีละ 1000 แถว)
+                // 3. [SRS Critical] Chunking
                 const CHUNK_SIZE = 1000;
                 const totalChunks = Math.ceil(data.length / CHUNK_SIZE);
                 
                 for (let i = 0; i < totalChunks; i++) {
                     const chunk = data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-                    
-                    // ส่งข้อมูลพร้อม Auto-Retry
                     await sendChunkWithRetry(chunk, currentBatchId);
                     
                     const percent = Math.round(((i + 1) / totalChunks) * 100);
@@ -121,20 +124,21 @@ export default function UploadNHSO() {
                 setStatus({ type: 'success', message: `อัปโหลดข้อมูล สปสช. สำเร็จ (${data.length.toLocaleString()} รายการ)` });
                 setBatchId(null);
                 setFile(null);
+                setUploading(false);
             };
 
             worker.onerror = (err) => {
                 worker.terminate();
-                throw new Error("เกิดข้อผิดพลาดรุนแรงใน Web Worker");
+                setUploading(false);
+                setStatus({ type: 'error', message: "เกิดข้อผิดพลาดรุนแรงใน Web Worker" });
             };
 
         } catch (error) {
             setStatus({ type: 'error', message: error.response?.data?.message || error.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ' });
-            // พยายามปลดล็อคหากเกิด Error
             if (batchId) {
-                api.post('/upload/unlock', { batch_id: batchId }).catch(()=>console.log("Unlock failed"));
+                api.post('/upload/unlock', { batch_id: batchId }).catch(() => console.log("Unlock failed"));
+                setBatchId(null);
             }
-        } finally {
             setUploading(false);
         }
     };
@@ -146,8 +150,6 @@ export default function UploadNHSO() {
             </h1>
 
             <div className="bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-slate-200">
-                
-                {/* File Upload Zone */}
                 <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors">
                     <input 
                         type="file" 
@@ -176,7 +178,6 @@ export default function UploadNHSO() {
                     </div>
                 )}
 
-                {/* Progress Bar */}
                 {uploading && (
                     <div className="mt-6 space-y-2">
                         <div className="flex justify-between text-sm font-medium text-slate-600">
@@ -189,7 +190,6 @@ export default function UploadNHSO() {
                     </div>
                 )}
 
-                {/* Status Message */}
                 {status.message && (
                     <div className={`mt-6 p-4 rounded-xl flex items-start gap-3 ${status.type === 'error' ? 'bg-red-50 text-red-700' : status.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
                         {status.type === 'error' ? <AlertCircle className="shrink-0" /> : status.type === 'success' ? <CheckCircle2 className="shrink-0" /> : <Loader2 className="shrink-0 animate-spin" />}
