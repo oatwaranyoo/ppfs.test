@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import DataTable from 'react-data-table-component';
 import api from '../services/api';
-import { Database, Search, Calendar, RefreshCw } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
+// 1. เพิ่ม Loader2 เข้ามาในบรรทัดนี้
+import { Database, Search, Calendar, RefreshCw, Loader2 } from 'lucide-react'; 
 
 export default function DataNHSO() {
     const [data, setData] = useState([]);
@@ -15,7 +15,8 @@ export default function DataNHSO() {
     const [searchText, setSearchText] = useState('');
     const [filterYear, setFilterYear] = useState('');
     
-    const { isDarkMode } = useTheme();
+    // 2. ลบ useTheme() ออก และตั้งค่า isDarkMode เป็น false ชั่วคราวก่อน
+    const isDarkMode = false; 
 
     const fetchNhsoData = async (currentPage, currentPerPage, search, year) => {
         setLoading(true);

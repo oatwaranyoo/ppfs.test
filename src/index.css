@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* เพิ่มบรรทัดนี้เพื่อบอกให้ Tailwind รู้จักโหมด Dark ผ่านคลาส .dark */
+@custom-variant dark (&:is(.dark *));
+
+/* โค้ดอื่นๆ ของคุณ (ถ้ามี) */
 body {
-  @apply bg-slate-50 text-slate-900 font-sans;
+  @apply antialiased;
 }

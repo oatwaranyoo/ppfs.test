@@ -1,34 +1,51 @@
-import { useState } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
 const MainLayout = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true); // ให้เปิดเป็นค่าเริ่มต้น
-    const token = localStorage.getItem('token');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        return localStorage.getItem('theme') === 'dark';
+    });
 
-    // ถ้าไม่มี Token ให้เตะกลับไปหน้า Login
-    if (!token) {
-        return <Navigate to="/login" replace />;
-    }
+    useEffect(() => {
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [isDarkMode]);
+
+    const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
     return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-            <Sidebar isOpen={isSidebarOpen} />
+        // พื้นหลังเป็นสีเทาอ่อน/เข้ม แบบ Solid (ดูทางการและสบายตากว่า Gradient)
+        <div className="flex h-screen overflow-hidden font-sans bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+            
+            <Sidebar isOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
             
             <div className="flex-1 flex flex-col h-screen overflow-hidden">
-                <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+                <Header 
+                    toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
+                    isDarkMode={isDarkMode}
+                    toggleTheme={toggleTheme}
+                />
                 
-                {/* พื้นที่สำหรับแสดงเนื้อหาของแต่ละหน้า */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-6">
-                    <Outlet />
+                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8">
+                    {/* จำกัดความกว้างสูงสุดเพื่อให้เนื้อหาไม่อ่านยากบนจอใหญ่ */}
+                    <div className="max-w-7xl mx-auto">
+                        <Outlet />
+                    </div>
                 </main>
             </div>
 
-            {/* Overlay สำหรับตอนย่อจอในมือถือแล้วเปิด Sidebar */}
             {isSidebarOpen && (
                 <div 
-                    className="fixed inset-0 bg-black/50 z-10 md:hidden"
+                    className="fixed inset-0 bg-slate-900/60 z-20 md:hidden cursor-pointer backdrop-blur-sm transition-opacity"
                     onClick={() => setIsSidebarOpen(false)}
                 ></div>
             )}
