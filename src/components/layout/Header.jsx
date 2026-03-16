@@ -163,23 +163,36 @@ const Header = ({ toggleSidebar, isDarkMode, toggleTheme }) => {
                             <ChevronDown className={`w-3.5 h-3.5 text-slate-400 hidden md:block transition-transform duration-200 cursor-pointer ${isDropdownOpen ? 'rotate-180 text-blue-500' : ''}`} />
                         </div>
 
-                        {isDropdownOpen && (
-                            <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/50 border border-slate-100 dark:border-slate-700/80 p-2 z-50 animate-in fade-in slide-in-from-top-4 duration-200">
-                                {isLoggedIn ? (
-                                    <>
-                                        <div className="px-4 py-3 mb-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl md:hidden">
-                                            <p className="text-sm font-bold text-slate-800 dark:text-white">{userData.firstName}</p>
-                                            <p className="text-xs font-semibold text-slate-500 mt-1">{userData.roleDisplay}</p>
-                                        </div>
-                                        <button 
-                                            onClick={handleLogout}
-                                            className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl flex items-center gap-3 cursor-pointer transition-colors"
-                                        >
-                                            <LogOut className="w-4 h-4 cursor-pointer" />
-                                            ออกจากระบบ
-                                        </button>
-                                    </>
-                                ) : (
+                        {/* Dropdown Menu */}
+{isDropdownOpen && (
+    <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/50 border border-slate-100 dark:border-slate-700/80 p-2 z-50 animate-in fade-in slide-in-from-top-4 duration-200">
+        {isLoggedIn ? (
+            <>
+                <div className="px-4 py-3 mb-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl md:hidden">
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">{userData.firstName}</p>
+                    <p className="text-xs font-semibold text-slate-500 mt-1">{userData.roleDisplay}</p>
+                </div>
+                
+                {/* [เพิ่ม] เมนูข้อมูลส่วนตัว */}
+                <button 
+                    onClick={() => { setIsDropdownOpen(false); navigate('/profile'); }}
+                    className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl flex items-center gap-3 cursor-pointer transition-colors mb-1"
+                >
+                    <User className="w-4 h-4 cursor-pointer" />
+                    ข้อมูลส่วนตัว
+                </button>
+
+                <div className="h-px bg-slate-100 dark:bg-slate-700/80 my-1"></div>
+
+                <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl flex items-center gap-3 cursor-pointer transition-colors"
+                >
+                    <LogOut className="w-4 h-4 cursor-pointer" />
+                    ออกจากระบบ
+                </button>
+            </>
+        ) : (
                                     <button 
                                         onClick={() => { setIsDropdownOpen(false); navigate('/login'); }}
                                         className="w-full text-left px-4 py-2.5 text-[13px] font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-xl flex items-center gap-3 cursor-pointer transition-colors"

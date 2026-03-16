@@ -2,7 +2,8 @@ import * as XLSX from 'xlsx';
 
 self.onmessage = async (e) => {
     try {
-        const { file } = e.data;
+        // [ปรับปรุง] รับค่า expectedFiscalYear และ defaultMonthCount จากหน้า Upload
+        const { file, expectedFiscalYear, defaultMonthCount } = e.data;
         const reader = new FileReader();
         
         reader.onload = (event) => {
@@ -12,7 +13,7 @@ self.onmessage = async (e) => {
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
 
-                // [SRS MUST] 1. Max Row Limit Shield
+                // 1. Max Row Limit Shield
                 const range = XLSX.utils.decode_range(worksheet['!ref'] || "A1:A1");
                 const totalRows = (range.e.r - range.s.r) + 1;
                 
@@ -21,8 +22,6 @@ self.onmessage = async (e) => {
                 }
 
                 const rawJsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-                // [SRS MUST] 2. Data Sanitization & Math Precision Safety
                 const sanitizedData = [];
                 
                 for (let i = 0; i < rawJsonData.length; i++) {
@@ -39,8 +38,6 @@ self.onmessage = async (e) => {
                         
                         if (typeof val === 'string') {
                             val = val.trim();
-                            // ป้องกันปัญหาทศนิยมเพี้ยนหากเป็นตัวเลขจำนวนเงิน
-                            // โดยไม่แปลงเป็น Float ค้างไว้ใน Memory แต่ส่งกลับเป็น String ตัวเลขแทน
                             const isNumeric = /^-?\d+(?:,\d{3})*(?:\.\d+)?$/.test(val);
                             if (isNumeric) {
                                 val = val.replace(/,/g, ''); 
@@ -52,6 +49,16 @@ self.onmessage = async (e) => {
                     }
                     
                     if (!isEmptyRow) {
+                        // [SRS] Validation: ตรวจสอบปีงบประมาณในไฟล์ว่าตรงกับที่ผู้ใช้เลือกหรือไม่
+                        const rowYear = cleanRow['ปีงบ'] || cleanRow['ปีงบประมาณ'] || cleanRow['fiscal_year'];
+                        if (expectedFiscalYear && rowYear && String(rowYear) !== String(expectedFiscalYear)) {
+                            throw new Error(`พบข้อมูลปีงบประมาณไม่ตรงกับที่ระบุ (ในไฟล์ระบุปี ${rowYear} แต่คุณเลือกปี ${expectedFiscalYear}) ที่แถว ${i + 2}`);
+                        }
+
+                        // [SRS] Data Injection: แทรกจำนวนเดือนและปีงบเข้าไปใน Object อัตโนมัติ (เพื่อส่งให้ Backend)
+                        cleanRow['month_count'] = cleanRow['จำนวนเดือน'] || cleanRow['month_count'] || defaultMonthCount;
+                        cleanRow['fiscal_year'] = rowYear || expectedFiscalYear;
+
                         sanitizedData.push(cleanRow);
                     }
                 }

@@ -7,49 +7,38 @@ import AuditLogs from './pages/AuditLogs';
 import UploadNHSO from './pages/UploadNHSO';
 import DataNHSO from './pages/DataNHSO';
 
-// สร้าง Wrapper Component เพื่อดักจับเฉพาะหน้าที่ต้อง Login
+// [เพิ่ม Import หน้าใหม่ 2 หน้า]
+import Profile from './pages/Profile';
+import Users from './pages/Users';
+
 const ProtectedRoute = () => {
-    // [แก้ไข] เปลี่ยนมาดึงค่าจาก sessionStorage ให้ตรงกับที่ Login.jsx บันทึกไว้
     const tokenPayload = sessionStorage.getItem('token_payload'); 
     const user = sessionStorage.getItem('user');
     
-    // ตรวจสอบว่ามีทั้ง Token และ ข้อมูล User หรือไม่
     if (!tokenPayload || !user) {
-        // ถ้าไม่มี ให้ Redirect ไปหน้า Login
         return <Navigate to="/login" replace />;
     }
-    
-    // ถ้ามี ให้เรนเดอร์หน้า Component ย่อย (Outlet) ตามปกติ
     return <Outlet />;
 };
-
-const PlaceholderPage = ({ title }) => (
-    <div className="flex items-center justify-center h-full">
-        <h2 className="text-2xl text-slate-400 font-medium">อยู่ระหว่างการพัฒนา: {title}</h2>
-    </div>
-);
 
 function App() {
     return (
         <Routes>
-            {/* หน้า Login (แยกออกไปต่างหาก ไม่มี Sidebar) */}
             <Route path="/login" element={<Login />} />
             
-            {/* MainLayout จะครอบทุกหน้าเพื่อแสดง Sidebar และ Header */}
             <Route path="/" element={<MainLayout />}>
-                
-                {/* 🟢 PUBLIC ROUTE: หน้า Home (Dashboard) เข้าได้ทันทีไม่ต้อง Login */}
                 <Route index element={<Home />} /> 
 
-                {/* 🔴 PROTECTED ROUTES: หน้าที่ต้อง Login ก่อนถึงจะเข้าได้ */}
                 <Route element={<ProtectedRoute />}>
                     <Route path="upload-hdc" element={<UploadHDC />} />
                     <Route path="upload-nhso" element={<UploadNHSO />} />
                     <Route path="data-nhso" element={<DataNHSO />} />
-                    <Route path="users" element={<PlaceholderPage title="ระบบจัดการผู้ใช้งาน" />} />
                     <Route path="settings" element={<AuditLogs />} />
+                    
+                    {/* [อัปเดต] ผูก Route เข้ากับหน้าใหม่ */}
+                    <Route path="profile" element={<Profile />} />
+                    <Route path="users" element={<Users />} />
                 </Route>
-
             </Route>
         </Routes>
     );
